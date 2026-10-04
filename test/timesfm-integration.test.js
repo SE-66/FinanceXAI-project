@@ -31,6 +31,19 @@ test("TimesFM service uses the official TimesFM 3 model path", () => {
   assert.match(service, /timesfm-non-commercial-license-v1\.0/);
 });
 
+test("container installs CPU-only PyTorch without the TimesFM torch extra", async () => {
+  const [dockerfile, requirements] = await Promise.all([
+    readFile(new URL("../timesfm-service/Dockerfile", import.meta.url), "utf8"),
+    readFile(new URL("../timesfm-service/requirements.txt", import.meta.url), "utf8")
+  ]);
+
+  assert.match(dockerfile, /download\.pytorch\.org\/whl\/cpu/);
+  assert.match(dockerfile, /torch==2\.10\.0/);
+  assert.match(dockerfile, /assert not torch\.cuda\.is_available/);
+  assert.doesNotMatch(requirements, /timesfm\[torch\]/);
+  assert.match(requirements, /^timesfm==3\.0\.2$/m);
+});
+
 test("UI identifies the model and license boundary", () => {
   assert.match(html, /Google TimesFM 3/);
   assert.match(html, /Cloudflare Container/);

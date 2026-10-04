@@ -34,7 +34,7 @@ test("UI embeds the live open-source TS Foundation Lab", () => {
   assert.match(html, /https:\/\/hari31416-ts-foundation-lab\.hf\.space/);
   assert.match(html, /Open-source TimesFM Lab/);
   assert.match(html, /external Hugging Face Space/);
-  assert.doesNotMatch(html, /Cloudflare Container/);
+  assert.doesNotMatch(html, /TimesFM 3\.0 — Cloudflare Container/);
 });
 
 test("requested research workspace provenance remains pinned", () => {

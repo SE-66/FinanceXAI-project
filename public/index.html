@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="FinanceXAI — open-source financial forecasting workspace on Cloudflare." />
+  <meta name="description" content="FinanceXAI — native TimesFM forecasting interface backed by an open-source Hugging Face Space." />
   <title>FinanceXAI</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -16,22 +16,22 @@
       </a>
       <div class="topbar-meta">
         <span class="pill">Cloudflare Free</span>
-        <span class="pill muted">TimesFM 3 · OSS Space</span>
+        <span class="pill muted">TimesFM 3 · OSS API</span>
       </div>
     </nav>
 
     <header class="hero">
       <div>
         <p class="eyebrow">FINANCIAL FORECASTING WORKSPACE</p>
-        <h1>Forecast with TimesFM without a paid container.</h1>
+        <h1>Run TimesFM from your FinanceXAI interface.</h1>
         <p class="hero-copy">
-          FinanceXAI stays on Cloudflare Workers for the application layer and embeds the open-source TS Foundation Lab for TimesFM 3 execution.
+          FinanceXAI keeps the controls and results native. The open-source Hugging Face Space supplies TimesFM execution through its Gradio API.
         </p>
       </div>
       <aside class="truth-card" aria-label="Current engine status">
-        <span class="truth-label">Current forecast path</span>
-        <strong>TimesFM 3 via open-source Space</strong>
-        <p>No Cloudflare Container is required. Model execution happens inside the external Hugging Face Space embedded below.</p>
+        <span class="truth-label">Execution boundary</span>
+        <strong>FinanceXAI UI → Gradio API → TimesFM 3</strong>
+        <p>The external Space runs the model, but its dashboard is no longer embedded. Forecast controls and returned metrics stay in FinanceXAI.</p>
       </aside>
     </header>
 
@@ -41,7 +41,7 @@
           <div class="panel-heading">
             <div>
               <span class="step">01</span>
-              <h2>Prepare data</h2>
+              <h2>Load data</h2>
             </div>
             <span id="dataBadge" class="status-badge sample">Sample data</span>
           </div>
@@ -49,7 +49,7 @@
           <label class="field">
             <span>CSV file</span>
             <input id="fileInput" type="file" accept=".csv,text/csv" />
-            <small>FinanceXAI selects the numeric column with the most valid observations for a prepared two-column CSV.</small>
+            <small>FinanceXAI selects the numeric column with the most valid observations and keeps the ordered period column when available.</small>
           </label>
 
           <div class="two-fields">
@@ -88,79 +88,114 @@
           <div class="panel-heading">
             <div>
               <span class="step">02</span>
-              <h2>Send to TimesFM Lab</h2>
+              <h2>Configure TimesFM</h2>
             </div>
+            <span id="modelStatusBadge" class="status-badge">Not connected</span>
           </div>
 
           <label class="field">
-            <span>Engine</span>
-            <select disabled aria-label="Forecast engine">
-              <option>Google TimesFM 3 · TS Foundation Lab</option>
+            <span>Model</span>
+            <select disabled aria-label="Forecast model">
+              <option>TimesFM-3 (Zero-Shot)</option>
             </select>
-            <small>The embedded open-source lab provides TimesFM 3 model execution, CSV upload, horizon controls, plots, and prediction export.</small>
+            <small>Execution uses the public hari31416/ts-foundation-lab Gradio API.</small>
           </label>
 
-          <div class="method-card">
-            <span>Free turnaround workflow</span>
-            <p>Prepare a normalized CSV here, then upload that file in the embedded lab below. Select TimesFM-3, set the horizon, and run the model inside the lab.</p>
+          <div class="two-fields forecast-controls">
+            <label class="field">
+              <span>Forecast horizon</span>
+              <select id="horizon">
+                <option value="12" selected>12 steps</option>
+                <option value="24">24 steps</option>
+                <option value="48">48 steps</option>
+                <option value="96">96 steps</option>
+                <option value="128">128 steps</option>
+                <option value="192">192 steps</option>
+                <option value="256">256 steps</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Context</span>
+              <select id="context">
+                <option value="64" selected>64 steps</option>
+                <option value="128">128 steps</option>
+                <option value="256">256 steps</option>
+                <option value="384">384 steps</option>
+                <option value="512">512 steps</option>
+                <option value="1024">1024 steps</option>
+              </select>
+            </label>
           </div>
 
-          <button id="prepareButton" class="button primary full" type="button">Download prepared CSV &amp; open lab</button>
-          <a class="button secondary full link-button" href="#timesfmLab">Open lab without download</a>
+          <label class="check-field">
+            <input id="backtest" type="checkbox" />
+            <span>
+              <strong>Backtest mode</strong>
+              <small>Hold out the last horizon and compute model accuracy against known actuals.</small>
+            </span>
+          </label>
+
+          <button id="forecastButton" class="button primary full" type="button">Run TimesFM forecast</button>
           <p id="status" class="status" role="status" aria-live="polite">Ready. Sample data is loaded.</p>
         </article>
       </section>
 
-      <section id="timesfmLab" class="panel lab-panel" aria-labelledby="labTitle">
+      <section class="panel results-panel" aria-labelledby="resultsTitle">
         <div class="panel-heading result-heading">
           <div>
             <span class="step">03</span>
-            <h2 id="labTitle">Open-source TimesFM Lab</h2>
+            <h2 id="resultsTitle">TimesFM result</h2>
           </div>
-          <div class="lab-actions">
-            <button id="fullscreenLabButton" class="button primary compact-link" type="button">Full screen lab</button>
-            <a
-              class="button secondary link-button compact-link"
-              href="https://huggingface.co/spaces/hari31416/ts-foundation-lab"
-              target="_blank"
-              rel="noreferrer"
-            >Open directly</a>
+          <a
+            id="predictionDownload"
+            class="button secondary link-button compact-link disabled-link"
+            href="#"
+            aria-disabled="true"
+          >Download predictions</a>
+        </div>
+
+        <div class="result-state" id="resultState">
+          <strong>No forecast yet</strong>
+          <p>Run TimesFM to populate model metrics and prediction output here.</p>
+        </div>
+
+        <div id="metricsWrap" class="native-result-block" hidden>
+          <div class="preview-head">
+            <span>Model metrics</span>
+            <strong>Returned by TS Foundation Lab</strong>
+          </div>
+          <div class="table-scroll">
+            <table id="metricsTable"></table>
           </div>
         </div>
 
-        <div class="lab-boundary">
-          <strong>Execution boundary</strong>
-          <p>
-            This embedded application is the public <code>hari31416/ts-foundation-lab</code> Hugging Face Space.
-            CSV uploads and model inference happen in that external Space, not in the FinanceXAI Cloudflare Worker.
-          </p>
+        <div id="predictionsWrap" class="native-result-block" hidden>
+          <div class="preview-head">
+            <span>Prediction output</span>
+            <strong id="predictionCount">—</strong>
+          </div>
+          <div class="table-scroll prediction-scroll">
+            <table id="predictionsTable"></table>
+          </div>
         </div>
 
-        <div class="lab-frame-wrap">
-          <iframe
-            id="timesfmFrame"
-            class="lab-frame"
-            src="https://hari31416-ts-foundation-lab.hf.space"
-            title="TS Foundation Lab — TimesFM 3"
-            loading="lazy"
-            referrerpolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
-            allow="clipboard-write"
-          ></iframe>
-        </div>
+        <details class="diagnostic-panel">
+          <summary>Execution details</summary>
+          <pre id="executionDetails">No execution yet.</pre>
+        </details>
       </section>
 
       <section class="integrity-note">
-        <strong>FinanceXAI · free OSS path</strong>
+        <strong>FinanceXAI · native OSS client path</strong>
         <p>
-          The Cloudflare app does not claim to execute TimesFM itself. The embedded open-source Space is a separate runtime and trust boundary. TimesFM 3 pretrained weights remain subject to the model provider's non-commercial license.
+          FinanceXAI no longer embeds the third-party Gradio dashboard. It calls that public Space through Gradio's open-source JavaScript client and renders the returned output in this application. Model availability and quota remain controlled by the external Space.
         </p>
       </section>
     </main>
 
     <footer>
       <span>FinanceXAI</span>
-      <span>GitHub source · Cloudflare frontend · open-source TimesFM Space</span>
+      <span>GitHub source · Cloudflare frontend · open-source TimesFM execution</span>
     </footer>
   </div>
 

@@ -160,3 +160,28 @@ footer{display:flex;justify-content:space-between;gap:16px;padding:34px 2px 42px
   .lab-panel{padding:14px}
   .lab-frame{min-height:780px}
 }
+
+.lab-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lab-panel{
+  width:min(1440px,calc(100vw - 20px));
+  margin-left:50%;
+  transform:translateX(-50%);
+}
+.lab-frame{min-height:1100px}
+.lab-frame-wrap:fullscreen{
+  width:100vw;
+  height:100vh;
+  border:0;
+  border-radius:0;
+  background:#111;
+}
+.lab-frame-wrap:fullscreen .lab-frame{
+  width:100vw;
+  height:100vh;
+  min-height:100vh;
+}
+@media(max-width:700px){
+  .lab-actions{width:100%}
+  .lab-actions .button{flex:1}
+  .lab-frame{min-height:900px}
+}

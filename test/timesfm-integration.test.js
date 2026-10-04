@@ -39,7 +39,9 @@ test("native UI lazy-loads the Gradio client instead of blocking startup", () =>
   assert.match(app, /Client\.connect\(SPACE_ORIGIN/);
   assert.doesNotMatch(app, /view_api\(\)/);
   assert.match(app, /"\/on_file_uploaded"/);
-  assert.match(app, /"\/run_forecast_pipeline"/);
+  assert.match(app, /client\.predict\(\s*"\/run_forecast_pipeline"/);
+  assert.match(app, /forecastResult\?\.data/);
+  assert.doesNotMatch(app, /runSubmission\(/);
   assert.match(app, /"TimesFM-3 \(Zero-Shot\)"/);
   assert.doesNotMatch(html, /<iframe/i);
   assert.match(html, /Run TimesFM forecast/);

@@ -9,7 +9,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Cloudflare Containers are CPU-only for this service. Install PyTorch from the
+# official CPU wheel index first, then install TimesFM without its [torch] extra.
+# This prevents pip from resolving the multi-gigabyte CUDA/NVIDIA dependency set.
+RUN python -m pip install --no-cache-dir --no-compile \
+      torch==2.10.0 \
+      --index-url https://download.pytorch.org/whl/cpu \
+ && python -m pip install --no-cache-dir --no-compile -r requirements.txt \
+ && python -c "import torch; import timesfm3; assert not torch.cuda.is_available(); print('CPU-only PyTorch', torch.__version__)" \
+ && find /usr/local/lib/python3.11/site-packages -type d -name __pycache__ -prune -exec rm -rf '{}' +
 
 # Bake the public TimesFM 3 checkpoint into the image so production inference
 # does not need a runtime model-host dependency.

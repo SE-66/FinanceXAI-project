@@ -17,7 +17,7 @@ RUN python -m pip install --no-cache-dir --no-compile \
       torch==2.10.0 \
       --index-url https://download.pytorch.org/whl/cpu \
  && python -m pip install --no-cache-dir --no-compile -r requirements.txt \
- && python -c "import torch; import timesfm3; assert not torch.cuda.is_available(); print('CPU-only PyTorch', torch.__version__)" \
+ && python -c "import torch; from timesfm3 import ModelConfig, TimesFM3Evaluator; assert not torch.cuda.is_available(); print('CPU-only PyTorch', torch.__version__, 'TimesFM3Evaluator import OK')" \
  && find /usr/local/lib/python3.11/site-packages -type d -name __pycache__ -prune -exec rm -rf '{}' +
 
 # Bake the public TimesFM 3 checkpoint into the image so production inference

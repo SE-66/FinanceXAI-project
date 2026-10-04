@@ -35,8 +35,6 @@ async function loadGradioModule() {
 
 const SPACE_ID = "hari31416/ts-foundation-lab";
 const SPACE_ORIGIN = "https://hari31416-ts-foundation-lab.hf.space";
-const REQUIRED_ENDPOINTS = ["/on_file_uploaded", "/run_forecast_pipeline"];
-
 const sample = {
   name: "Monthly revenue",
   unit: "$",
@@ -52,7 +50,6 @@ const state = {
   values: [],
   source: "sample",
   client: null,
-  apiInfo: null,
   predictionUrl: null
 };
 
@@ -448,22 +445,29 @@ async function getTimesFmClient() {
 
   const { Client } = await loadGradioModule();
 
-  const client = await Client.connect(SPACE_ID, {
-    events: ["data", "status"]
+  const client = await Client.connect(SPACE_ORIGIN, {
+    events: ["data", "status"],
+    status_callback: (spaceStatus) => {
+      if (!spaceStatus || typeof spaceStatus !== "object") return;
+
+      if (spaceStatus.status === "running") {
+        setModelStatus("API ready", "sample");
+        return;
+      }
+
+      if (spaceStatus.status === "sleeping" || spaceStatus.status === "building") {
+        setModelStatus("Waking model…");
+        setStatus(spaceStatus.message || "TimesFM Space is starting…");
+        return;
+      }
+
+      if (spaceStatus.status === "space_error") {
+        setModelStatus("Space error");
+      }
+    }
   });
 
-  const apiInfo = await client.view_api();
-  const named = apiInfo?.named_endpoints || {};
-  const missing = REQUIRED_ENDPOINTS.filter((endpoint) => !named[endpoint]);
-
-  if (missing.length) {
-    throw new Error(
-      `The upstream TimesFM Space API changed. Missing endpoint${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}.`
-    );
-  }
-
   state.client = client;
-  state.apiInfo = apiInfo;
   setModelStatus("API ready", "sample");
   return client;
 }

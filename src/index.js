@@ -1,22 +1,46 @@
 import { linearTrendForecast } from "./forecast.js";
 
-function json(data, status = 200) {
+function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
+      "cache-control": "no-store",
+      ...extraHeaders
     }
   });
 }
 
-function errorResponse(message, status) {
-  return json({ error: message }, status);
+function errorResponse(message, status, extraHeaders = {}) {
+  return json({ error: message }, status, extraHeaders);
 }
 
 async function handleForecast(request) {
+  if (request.method === "GET") {
+    return json({
+      endpoint: "/api/forecast",
+      method: "POST",
+      contentType: "application/json",
+      engine: "linear-trend-baseline-v1",
+      request: {
+        series: [100, 105, 111, 118, 124],
+        horizon: 6
+      },
+      limits: {
+        minimumObservations: 3,
+        maximumObservations: 5000,
+        horizon: {
+          minimum: 1,
+          maximum: 120
+        }
+      }
+    });
+  }
+
   if (request.method !== "POST") {
-    return errorResponse("Method not allowed.", 405);
+    return errorResponse("Method not allowed.", 405, {
+      allow: "GET, POST"
+    });
   }
 
   const contentType = request.headers.get("content-type") || "";
@@ -52,7 +76,9 @@ export default {
 
     if (url.pathname === "/api/health") {
       if (request.method !== "GET") {
-        return errorResponse("Method not allowed.", 405);
+        return errorResponse("Method not allowed.", 405, {
+          allow: "GET"
+        });
       }
 
       return json({

@@ -8,6 +8,29 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  "containers": [
+    {
+      "class_name": "TimesFMContainer",
+      "image": "./timesfm-service/Dockerfile",
+      "image_build_context": "./timesfm-service",
+      "max_instances": 1,
+      "instance_type": "standard-2"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TIMESFM",
+        "class_name": "TimesFMContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TimesFMContainer"]
+    }
+  ],
   "observability": {
     "enabled": true
   }

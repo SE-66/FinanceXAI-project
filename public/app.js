@@ -472,30 +472,6 @@ async function getTimesFmClient() {
   return client;
 }
 
-async function runSubmission(client, endpoint, payload) {
-  const submission = client.submit(endpoint, payload);
-  let finalData = null;
-
-  for await (const message of submission) {
-    if (message.type === "status") {
-      const stage = message.stage || "processing";
-      const position = Number.isFinite(message.position)
-        ? ` · queue position ${message.position + 1}`
-        : "";
-      const eta = Number.isFinite(message.eta)
-        ? ` · ETA ${Math.max(0, Math.round(message.eta))}s`
-        : "";
-      setStatus(`TimesFM: ${stage}${position}${eta}`);
-    }
-
-    if (message.type === "data") {
-      finalData = message.data;
-    }
-  }
-
-  return finalData;
-}
-
 async function loadPredictionCsv(url) {
   const response = await fetch(url, { credentials: "omit" });
   if (!response.ok) {
@@ -575,8 +551,9 @@ async function runForecast() {
 
     setStatus("TimesFM accepted the dataset. Starting model inference…");
 
-    const resultData = await runSubmission(
-      client,
+    setStatus("TimesFM is running the forecast…");
+
+    const forecastResult = await client.predict(
       "/run_forecast_pipeline",
       [
         timestampColumn,
@@ -590,8 +567,23 @@ async function runForecast() {
       ]
     );
 
-    if (!Array.isArray(resultData) || resultData.length < 4) {
-      throw new Error("The TimesFM forecast endpoint returned an unexpected response.");
+    const resultData = Array.isArray(forecastResult?.data)
+      ? forecastResult.data
+      : null;
+
+    if (!resultData || resultData.length < 4) {
+      const responseShape = {
+        hasResult: Boolean(forecastResult),
+        resultType: typeof forecastResult,
+        hasData: Boolean(forecastResult && Object.prototype.hasOwnProperty.call(forecastResult, "data")),
+        dataType: typeof forecastResult?.data,
+        dataIsArray: Array.isArray(forecastResult?.data),
+        dataLength: Array.isArray(forecastResult?.data) ? forecastResult.data.length : null
+      };
+
+      throw new Error(
+        `The TimesFM forecast endpoint returned an unexpected response shape: ${JSON.stringify(responseShape)}`
+      );
     }
 
     const metricsValue = resultData[1];

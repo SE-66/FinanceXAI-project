@@ -31,8 +31,11 @@ test("package has no paid-container runtime dependency", () => {
   assert.doesNotMatch(pkg, /timesfm-service\/app\.py/);
 });
 
-test("native UI uses Gradio client instead of embedding the Space dashboard", () => {
+test("native UI lazy-loads the Gradio client instead of blocking startup", () => {
   assert.match(app, /@gradio\/client@2\.7\.1/);
+  assert.match(app, /loadGradioModule/);
+  assert.match(app, /await import\(url\)/);
+  assert.doesNotMatch(app, /^import\s+\{/m);
   assert.match(app, /Client\.connect\(SPACE_ID/);
   assert.match(app, /"\/on_file_uploaded"/);
   assert.match(app, /"\/run_forecast_pipeline"/);

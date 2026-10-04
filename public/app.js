@@ -62,6 +62,7 @@ const elements = {
   horizon: document.querySelector("#horizon"),
   context: document.querySelector("#context"),
   backtest: document.querySelector("#backtest"),
+  hfToken: document.querySelector("#hfToken"),
   forecastButton: document.querySelector("#forecastButton"),
   status: document.querySelector("#status"),
   dataBadge: document.querySelector("#dataBadge"),
@@ -440,12 +441,19 @@ function extractFileUrl(value) {
 async function getTimesFmClient() {
   if (state.client) return state.client;
 
-  setModelStatus("Connecting…");
-  setStatus("Connecting to the open-source TimesFM Space…");
+  const hfToken = elements.hfToken.value.trim();
+
+  setModelStatus(hfToken ? "Authenticating…" : "Connecting…");
+  setStatus(
+    hfToken
+      ? "Connecting to TimesFM with your Hugging Face account…"
+      : "Connecting to the open-source TimesFM Space anonymously…"
+  );
 
   const { Client } = await loadGradioModule();
 
   const client = await Client.connect(SPACE_ORIGIN, {
+    token: hfToken || undefined,
     events: ["data", "status"],
     status_callback: (spaceStatus) => {
       if (!spaceStatus || typeof spaceStatus !== "object") return;
@@ -481,6 +489,11 @@ async function loadPredictionCsv(url) {
 }
 
 function showExecutionError(message, details = {}) {
+  const quotaError = /ZeroGPU runs limit|quota/i.test(message);
+  if (quotaError && !elements.hfToken.value.trim()) {
+    message += " Add a Hugging Face token above and run again.";
+  }
+
   elements.resultState.hidden = false;
   elements.resultState.classList.remove("success-state");
   elements.resultState.classList.add("error-state");
@@ -700,6 +713,10 @@ elements.fileInput.addEventListener("change", async (event) => {
 elements.sampleButton.addEventListener("click", loadSample);
 elements.clearButton.addEventListener("click", clearData);
 elements.forecastButton.addEventListener("click", runForecast);
+elements.hfToken.addEventListener("change", () => {
+  state.client = null;
+  setModelStatus("Not connected");
+});
 elements.seriesName.addEventListener("input", renderInput);
 elements.valueUnit.addEventListener("input", renderInput);
 elements.predictionDownload.addEventListener("click", (event) => {

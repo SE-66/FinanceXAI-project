@@ -8,6 +8,16 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["TimesFMContainer"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["TimesFMContainer"]
+    }
+  ],
   "observability": {
     "enabled": true
   }

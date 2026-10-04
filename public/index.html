@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="FinanceXAI — Cloudflare-native financial forecasting workspace." />
+  <meta name="description" content="FinanceXAI — open-source financial forecasting workspace on Cloudflare." />
   <title>FinanceXAI</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -15,23 +15,23 @@
         <span>FinanceXAI</span>
       </a>
       <div class="topbar-meta">
-        <span class="pill">Cloudflare native</span>
-        <span class="pill muted">TimesFM 3</span>
+        <span class="pill">Cloudflare Free</span>
+        <span class="pill muted">TimesFM 3 · OSS Space</span>
       </div>
     </nav>
 
     <header class="hero">
       <div>
         <p class="eyebrow">FINANCIAL FORECASTING WORKSPACE</p>
-        <h1>Turn a time series into a clear forward view.</h1>
+        <h1>Forecast with TimesFM without a paid container.</h1>
         <p class="hero-copy">
-          Upload ordered financial data, choose a forecast horizon, and run a model-backed zero-shot forecast with Google TimesFM 3 on Cloudflare.
+          FinanceXAI stays on Cloudflare Workers for the application layer and embeds the open-source TS Foundation Lab for TimesFM 3 execution.
         </p>
       </div>
       <aside class="truth-card" aria-label="Current engine status">
-        <span class="truth-label">Current forecast engine</span>
-        <strong>Google TimesFM 3</strong>
-        <p>Model-backed inference runs in a Cloudflare Container. TimesFM 3 weights are licensed for non-commercial use.</p>
+        <span class="truth-label">Current forecast path</span>
+        <strong>TimesFM 3 via open-source Space</strong>
+        <p>No Cloudflare Container is required. Model execution happens inside the external Hugging Face Space embedded below.</p>
       </aside>
     </header>
 
@@ -41,7 +41,7 @@
           <div class="panel-heading">
             <div>
               <span class="step">01</span>
-              <h2>Load data</h2>
+              <h2>Prepare data</h2>
             </div>
             <span id="dataBadge" class="status-badge sample">Sample data</span>
           </div>
@@ -49,7 +49,7 @@
           <label class="field">
             <span>CSV file</span>
             <input id="fileInput" type="file" accept=".csv,text/csv" />
-            <small>The app automatically selects the numeric column with the most valid observations.</small>
+            <small>FinanceXAI selects the numeric column with the most valid observations for a prepared two-column CSV.</small>
           </label>
 
           <div class="two-fields">
@@ -88,99 +88,76 @@
           <div class="panel-heading">
             <div>
               <span class="step">02</span>
-              <h2>Configure forecast</h2>
+              <h2>Send to TimesFM Lab</h2>
             </div>
           </div>
 
           <label class="field">
             <span>Engine</span>
             <select disabled aria-label="Forecast engine">
-              <option>TimesFM 3.0 — Cloudflare Container</option>
+              <option>Google TimesFM 3 · TS Foundation Lab</option>
             </select>
-            <small>Zero-shot foundation-model forecast using google/timesfm-3.0-pytorch.</small>
-          </label>
-
-          <label class="field">
-            <span>Forecast horizon</span>
-            <div class="horizon-control">
-              <input id="horizon" type="number" min="1" max="120" value="12" inputmode="numeric" />
-              <span>future periods</span>
-            </div>
+            <small>The embedded open-source lab provides TimesFM 3 model execution, CSV upload, horizon controls, plots, and prediction export.</small>
           </label>
 
           <div class="method-card">
-            <span>What this model path does</span>
-            <p>TimesFM reads the ordered context and returns a point forecast plus 10th–90th percentile quantiles for each future step.</p>
+            <span>Free turnaround workflow</span>
+            <p>Prepare a normalized CSV here, then upload that file in the embedded lab below. Select TimesFM-3, set the horizon, and run the model inside the lab.</p>
           </div>
 
-          <button id="forecastButton" class="button primary full" type="button">Run forecast</button>
+          <button id="prepareButton" class="button primary full" type="button">Download prepared CSV &amp; open lab</button>
+          <a class="button secondary full link-button" href="#timesfmLab">Open lab without download</a>
           <p id="status" class="status" role="status" aria-live="polite">Ready. Sample data is loaded.</p>
         </article>
       </section>
 
-      <section class="panel results-panel" aria-labelledby="resultsTitle">
+      <section id="timesfmLab" class="panel lab-panel" aria-labelledby="labTitle">
         <div class="panel-heading result-heading">
           <div>
             <span class="step">03</span>
-            <h2 id="resultsTitle">Forecast result</h2>
+            <h2 id="labTitle">Open-source TimesFM Lab</h2>
           </div>
-          <button id="exportButton" class="button secondary" type="button" disabled>Export CSV</button>
+          <a
+            class="button secondary link-button compact-link"
+            href="https://huggingface.co/spaces/hari31416/ts-foundation-lab"
+            target="_blank"
+            rel="noreferrer"
+          >Open directly</a>
         </div>
 
-        <div class="metrics" id="metrics">
-          <div class="metric"><span>Latest actual</span><strong id="metricLatest">—</strong></div>
-          <div class="metric"><span>Forecast end</span><strong id="metricEnd">—</strong></div>
-          <div class="metric"><span>Projected change</span><strong id="metricChange">—</strong></div>
-          <div class="metric"><span>P10 · forecast end</span><strong id="metricLow">—</strong></div>
-          <div class="metric"><span>P90 · forecast end</span><strong id="metricHigh">—</strong></div>
-          <div class="metric"><span>80% interval width</span><strong id="metricWidth">—</strong></div>
+        <div class="lab-boundary">
+          <strong>Execution boundary</strong>
+          <p>
+            This embedded application is the public <code>hari31416/ts-foundation-lab</code> Hugging Face Space.
+            CSV uploads and model inference happen in that external Space, not in the FinanceXAI Cloudflare Worker.
+          </p>
         </div>
 
-        <div class="chart-card">
-          <div class="chart-head">
-            <div>
-              <strong id="chartTitle">Series</strong>
-              <span>History and forward TimesFM forecast</span>
-            </div>
-            <div class="legend" aria-label="Chart legend">
-              <span><i class="dot actual"></i>Actual</span>
-              <span><i class="dot forecast"></i>Forecast</span>
-            </div>
-          </div>
-          <svg id="chart" viewBox="0 0 920 300" role="img" aria-label="Historical and forecast chart">
-            <line id="splitLine" class="split-line" x1="0" x2="0" y1="18" y2="282"></line>
-            <path id="actualPath" class="actual-line" d=""></path>
-            <path id="forecastPath" class="forecast-line" d=""></path>
-          </svg>
-        </div>
-
-        <div class="forecast-table-wrap">
-          <div class="preview-head">
-            <span>Forecast values</span>
-            <strong id="forecastCount">No forecast yet</strong>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Future period</th><th>Forecast</th></tr></thead>
-              <tbody id="forecastTableBody">
-                <tr><td colspan="2" class="empty-cell">Run a forecast to populate this table.</td></tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="lab-frame-wrap">
+          <iframe
+            id="timesfmFrame"
+            class="lab-frame"
+            src="https://hari31416-ts-foundation-lab.hf.space"
+            title="TS Foundation Lab — TimesFM 3"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups"
+            allow="clipboard-write"
+          ></iframe>
         </div>
       </section>
 
       <section class="integrity-note">
-        <strong>FinanceXAI · TimesFM research path</strong>
+        <strong>FinanceXAI · free OSS path</strong>
         <p>
-          Forecasts are model-backed, not financial advice. TimesFM 3 pretrained weights use the timesfm-non-commercial-license-v1.0 license; commercial use requires separate licensing clearance.
+          The Cloudflare app does not claim to execute TimesFM itself. The embedded open-source Space is a separate runtime and trust boundary. TimesFM 3 pretrained weights remain subject to the model provider's non-commercial license.
         </p>
       </section>
     </main>
 
     <footer>
       <span>FinanceXAI</span>
-      <span>GitHub source · Cloudflare runtime</span>
+      <span>GitHub source · Cloudflare frontend · open-source TimesFM Space</span>
     </footer>
   </div>
 

@@ -18,11 +18,12 @@ test("FinanceXAI uses the open-source TimesFM Space execution boundary", () => {
   assert.doesNotMatch(worker, /@cloudflare\/containers/);
 });
 
-test("Wrangler is Free-Workers compatible and declares no containers", () => {
+test("Wrangler is Free-Workers compatible and retires the old Durable Object", () => {
   assert.match(wrangler, /"assets"/);
   assert.doesNotMatch(wrangler, /"containers"/);
   assert.doesNotMatch(wrangler, /"durable_objects"/);
-  assert.doesNotMatch(wrangler, /TimesFMContainer/);
+  assert.match(wrangler, /"tag": "v1"[\s\S]*"new_sqlite_classes": \["TimesFMContainer"\]/);
+  assert.match(wrangler, /"tag": "v2"[\s\S]*"deleted_classes": \["TimesFMContainer"\]/);
 });
 
 test("package has no paid-container runtime dependency", () => {

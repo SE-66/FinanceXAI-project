@@ -1,7 +1,37 @@
-import {
-  Client,
-  handle_file
-} from "https://cdn.jsdelivr.net/npm/@gradio/client@2.7.1/dist/index.min.js";
+const GRADIO_CLIENT_URLS = [
+  "https://cdn.jsdelivr.net/npm/@gradio/client@2.7.1/dist/index.min.js",
+  "https://esm.sh/@gradio/client@2.7.1"
+];
+
+let gradioModulePromise = null;
+
+async function loadGradioModule() {
+  if (gradioModulePromise) return gradioModulePromise;
+
+  gradioModulePromise = (async () => {
+    const errors = [];
+
+    for (const url of GRADIO_CLIENT_URLS) {
+      try {
+        return await import(url);
+      } catch (error) {
+        errors.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    throw new Error(
+      "Could not load the Gradio API client. Check browser network access and try again. " +
+      errors.join(" | ")
+    );
+  })();
+
+  try {
+    return await gradioModulePromise;
+  } catch (error) {
+    gradioModulePromise = null;
+    throw error;
+  }
+}
 
 const SPACE_ID = "hari31416/ts-foundation-lab";
 const SPACE_ORIGIN = "https://hari31416-ts-foundation-lab.hf.space";
@@ -416,6 +446,8 @@ async function getTimesFmClient() {
   setModelStatus("Connecting…");
   setStatus("Connecting to the open-source TimesFM Space…");
 
+  const { Client } = await loadGradioModule();
+
   const client = await Client.connect(SPACE_ID, {
     events: ["data", "status"]
   });
@@ -502,6 +534,7 @@ async function runForecast() {
 
   try {
     const client = await getTimesFmClient();
+    const { handle_file } = await loadGradioModule();
     const csv = makeTimesFmCsv();
     const uploadFile = new File(
       [csv],

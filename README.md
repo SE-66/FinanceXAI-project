@@ -1,61 +1,64 @@
 # FinanceXAI
 
-FinanceXAI is a financial time-series research workspace hosted on Cloudflare.
+FinanceXAI is a financial time-series research workspace hosted on Cloudflare Workers.
 
-## Current milestone: TimesFM 3
+## Current milestone: free open-source TimesFM turnaround
 
-The user-facing application is served by Cloudflare Workers Static Assets. Forecast requests are validated by the Worker and sent to a Cloudflare Container running Google TimesFM 3.
+FinanceXAI no longer requires Cloudflare Containers.
 
-### Implemented
+The user-facing application is served by Cloudflare Workers Static Assets. TimesFM execution is provided by the public open-source Hugging Face Space:
 
-- CSV upload for ordered financial/time-series data
-- automatic numeric-series detection
-- configurable 1–120 step forecast horizon
-- real model-backed TimesFM 3 forecast path
-- TimesFM 10th–90th percentile quantiles
-- history + forecast chart
-- latest value, forecast-end value, projected change, and end-horizon uncertainty metrics
-- forecast CSV export including P10/P90
-- Cloudflare Worker API validation
-- model health endpoint
-- GitHub verification workflow
-- no Supabase
-- no Vercel
-- no external database
+`hari31416/ts-foundation-lab`
+
+FinanceXAI embeds that Space directly inside the application.
 
 ## Architecture
 
 ```text
 Browser
   |
-  | static HTML/CSS/JS
+  | FinanceXAI HTML/CSS/JS
   v
 Cloudflare Worker + Static Assets
   |
-  | /api/forecast
+  | renders embedded model workspace
   v
-Cloudflare Container
+Hugging Face Space
+hari31416/ts-foundation-lab
   |
   v
-TimesFM 3
-google/timesfm-3.0-pytorch
+Google TimesFM 3
 ```
 
-Endpoints:
+Cloudflare remains the application host. The Hugging Face Space is a separate external execution and trust boundary.
 
-- `GET /api/health` — FinanceXAI Worker configuration/status
-- `GET /api/model/health` — starts/checks the TimesFM container
-- `GET /api/forecast` — forecast API contract
-- `POST /api/forecast` — TimesFM forecast
+## Why this path exists
 
-Example:
+Cloudflare Containers require a paid Workers entitlement. The previous container build was technically valid but could not be deployed on the current Free Workers account.
 
-```json
-{
-  "series": [100, 105, 111, 118, 124],
-  "horizon": 6
-}
-```
+The free turnaround therefore returns to the execution boundary used by the original TimesFM research workspace: Cloudflare serves the outer application while TimesFM runs in an external open-source forecasting Space.
+
+No paid Cloudflare Container is required by the current repository configuration.
+
+## User workflow
+
+1. Upload a financial/time-series CSV in FinanceXAI, or use the bundled sample.
+2. Click **Download prepared CSV & open lab**.
+3. FinanceXAI writes a simple `period,value`-style CSV and scrolls to the embedded TimesFM Lab.
+4. Upload that CSV inside the embedded lab.
+5. Select TimesFM-3 and configure the forecast horizon.
+6. Run the forecast and inspect/download the result inside the embedded lab.
+
+The cross-origin browser security boundary means FinanceXAI does not silently inject local files into the embedded Space.
+
+## API endpoints
+
+- `GET /api/health` — FinanceXAI runtime configuration.
+- `GET /api/model/health` — checks reachability of the external open-source Space.
+- `GET /api/forecast` — describes the current forecast execution contract.
+- `POST /api/forecast` — intentionally returns an explicit error because direct JSON-to-model inference is not implemented in this free turnaround.
+
+This prevents FinanceXAI from claiming that a local Worker API is executing TimesFM when the actual execution happens in the embedded external Space.
 
 ## TimesFM reference / mirror provenance
 
@@ -65,80 +68,48 @@ The project owner requested that FinanceXAI use:
 
 as the TimesFM reference.
 
-That repository's current `main` branch is no longer the TimesFM application; it was replaced by a DevCloud project. The relevant historical TimesFM snapshot is pinned at:
+The relevant historical TimesFM snapshot is pinned at:
 
 `17dc87aaee41d96d214269b65e6fd211d4b636ee`
 
-The historical implementation embedded an external Hugging Face forecasting Space and explicitly did not run the model locally. FinanceXAI uses that snapshot as provenance/reference rather than copying the later DevCloud source. The operational model adapter in this repository uses the official TimesFM package directly inside a Cloudflare Container.
+That snapshot explicitly embedded:
 
-See `mirrors/timesfm-research-workspace/README.md`.
+`https://hari31416-ts-foundation-lab.hf.space`
 
-## Model runtime
+and treated Hugging Face as the model-execution boundary.
 
-Container:
+See:
 
-`timesfm-service/`
-
-Pinned model package:
-
-`timesfm[torch]==3.0.2`
-
-Checkpoint:
-
-`google/timesfm-3.0-pytorch`
-
-The Docker build downloads the checkpoint into the container image. Runtime inference therefore does not require a separate hosted inference service.
-
-The Worker does not silently fall back to the old linear baseline. If the model container is unavailable, the API returns an explicit error.
+`mirrors/timesfm-research-workspace/README.md`
 
 ## License boundary
 
-The TimesFM source code and the pretrained model weights have different license boundaries.
+The TimesFM source code and pretrained model weights have separate license boundaries.
 
-The TimesFM 3 pretrained weights are identified by the model provider as:
+TimesFM 3 pretrained weights are distributed under:
 
 `timesfm-non-commercial-license-v1.0`
 
-This integration must be treated as a **research / non-commercial model path** unless separate licensing clearance is obtained. FinanceXAI must not describe the model as commercially licensed.
+Treat this integration as a research / non-commercial path unless separate licensing clearance is obtained.
 
-## Cloudflare requirements
-
-The frontend/Worker uses Workers Static Assets.
-
-TimesFM inference uses Cloudflare Containers with:
-
-- class: `TimesFMContainer`
-- one maximum running instance
-- `standard-2` instance type
-- 1 vCPU
-- 6 GiB memory
-- 12 GB disk
-- CPU inference
-- 15-minute idle sleep
-
-Cloudflare Containers require an eligible paid Workers setup.
+The external Space is separately maintained and can change, sleep, queue, or become unavailable independently of FinanceXAI.
 
 ## Development
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run locally:
+Requires Node.js and npm.
 
 ```bash
 npm run dev
 ```
 
-Run repository checks:
+Run checks:
 
 ```bash
+npm test
 npm run check
 ```
 
-The checks include Node tests, JavaScript syntax checks, Python syntax compilation, and a Wrangler deployment dry-run.
+`npm run check` runs the repository tests, JavaScript syntax checks, and a Wrangler deployment dry-run.
 
 ## Deploy
 
@@ -146,17 +117,17 @@ The checks include Node tests, JavaScript syntax checks, Python syntax compilati
 npm run deploy
 ```
 
-When GitHub is connected to Cloudflare Workers Builds, pushes to `main` can trigger the Worker and Container deployment.
+The current `wrangler.jsonc` contains only the Worker and Static Assets configuration. It declares no Containers or Durable Objects.
 
 ## Verification rule
 
-Source code, tests, or a successful Wrangler dry-run do not prove that the TimesFM model is live.
+A successful FinanceXAI deployment proves the Cloudflare application is live, not that the external model service is permanently available.
 
-After Cloudflare deploys the container, verify:
+For runtime verification:
 
-1. `GET /api/health`
-2. `GET /api/model/health`
-3. `POST /api/forecast` with a numeric series
-4. UI output and exported quantiles
+1. Check `GET /api/health`.
+2. Check `GET /api/model/health`.
+3. Open the embedded TimesFM Lab.
+4. Run a real forecast inside the Space.
 
-Only then should the TimesFM path be called runtime-verified.
+Only then should the full open-source forecast path be called runtime-verified.

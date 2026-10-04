@@ -26,7 +26,9 @@ const elements = {
   observationCount: document.querySelector("#observationCount"),
   valueHeader: document.querySelector("#valueHeader"),
   inputTableBody: document.querySelector("#inputTableBody"),
-  timesfmLab: document.querySelector("#timesfmLab")
+  timesfmLab: document.querySelector("#timesfmLab"),
+  labFrameWrap: document.querySelector(".lab-frame-wrap"),
+  fullscreenLabButton: document.querySelector("#fullscreenLabButton")
 };
 
 function setStatus(message, error = false) {
@@ -286,7 +288,29 @@ elements.fileInput.addEventListener("change", async (event) => {
 
 elements.sampleButton.addEventListener("click", loadSample);
 elements.clearButton.addEventListener("click", clearData);
+async function toggleLabFullscreen() {
+  try {
+    if (document.fullscreenElement === elements.labFrameWrap) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await elements.labFrameWrap.requestFullscreen();
+  } catch {
+    setStatus("Full-screen mode is not available in this browser. The lab is still usable in the expanded panel.", true);
+  }
+}
+
+function syncFullscreenButton() {
+  elements.fullscreenLabButton.textContent =
+    document.fullscreenElement === elements.labFrameWrap
+      ? "Exit full screen"
+      : "Full screen lab";
+}
+
 elements.prepareButton.addEventListener("click", prepareAndOpenLab);
+elements.fullscreenLabButton.addEventListener("click", toggleLabFullscreen);
+document.addEventListener("fullscreenchange", syncFullscreenButton);
 elements.seriesName.addEventListener("input", renderInput);
 elements.valueUnit.addEventListener("input", renderInput);
 

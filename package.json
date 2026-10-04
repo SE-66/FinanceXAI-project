@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npx wrangler@4.147.0 dev",
-    "deploy": "npx wrangler@4.147.0 deploy",
+    "dev": "npx --yes wrangler@4.147.0 dev",
+    "deploy": "npx --yes wrangler@4.147.0 deploy",
     "test": "node --test",
-    "check": "npm test && npx wrangler@4.147.0 deploy --dry-run"
+    "check": "npm test && node --check src/forecast.js && node --check src/index.js && node --check public/app.js && npx --yes wrangler@4.147.0 deploy --dry-run"
   }
 }

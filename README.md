@@ -2,26 +2,27 @@
 
 FinanceXAI is a financial time-series research workspace hosted on Cloudflare Workers.
 
-## Current milestone: free open-source TimesFM turnaround
+## Current milestone: native FinanceXAI UI with open-source TimesFM execution
 
-FinanceXAI no longer requires Cloudflare Containers.
+FinanceXAI does not require Cloudflare Containers.
 
-The user-facing application is served by Cloudflare Workers Static Assets. TimesFM execution is provided by the public open-source Hugging Face Space:
+The application UI and result rendering are native FinanceXAI code served by Cloudflare Workers Static Assets. Model execution is supplied by the public Hugging Face Space:
 
 `hari31416/ts-foundation-lab`
 
-FinanceXAI embeds that Space directly inside the application.
+FinanceXAI connects to that Space programmatically using Gradio's open-source JavaScript client instead of embedding the third-party dashboard.
 
 ## Architecture
 
 ```text
-Browser
+FinanceXAI browser
   |
-  | FinanceXAI HTML/CSS/JS
+  | native CSV controls / horizon / context / results
   v
-Cloudflare Worker + Static Assets
+@gradio/client
   |
-  | renders embedded model workspace
+  | /on_file_uploaded
+  | /run_forecast_pipeline
   v
 Hugging Face Space
 hari31416/ts-foundation-lab
@@ -30,37 +31,47 @@ hari31416/ts-foundation-lab
 Google TimesFM 3
 ```
 
-Cloudflare remains the application host. The Hugging Face Space is a separate external execution and trust boundary.
+Cloudflare remains the FinanceXAI application host. Hugging Face remains a separate model-execution and trust boundary.
 
 ## Why this path exists
 
-Cloudflare Containers require a paid Workers entitlement. The previous container build was technically valid but could not be deployed on the current Free Workers account.
+Cloudflare Containers require a paid Workers entitlement. The prior container image was technically valid, but deployment could not complete on the current Free Workers account.
 
-The free turnaround therefore returns to the execution boundary used by the original TimesFM research workspace: Cloudflare serves the outer application while TimesFM runs in an external open-source forecasting Space.
+The first free workaround embedded the entire Gradio dashboard in an iframe. That exposed upstream Gradio plot/component errors directly inside FinanceXAI.
 
-No paid Cloudflare Container is required by the current repository configuration.
+The current implementation removes that iframe. FinanceXAI now calls the Space through Gradio's JavaScript client and renders the returned model metrics and prediction CSV natively.
 
-## User workflow
+## Forecast workflow
 
-1. Upload a financial/time-series CSV in FinanceXAI, or use the bundled sample.
-2. Click **Download prepared CSV & open lab**.
-3. FinanceXAI writes a simple `period,value`-style CSV and scrolls to the embedded TimesFM Lab.
-4. Upload that CSV inside the embedded lab.
-5. Select TimesFM-3 and configure the forecast horizon.
-6. Run the forecast and inspect/download the result inside the embedded lab.
+1. Upload a time-series CSV in FinanceXAI, or use the bundled sample.
+2. Choose a supported TimesFM forecast horizon and context length.
+3. Optionally enable backtest mode.
+4. Click **Run TimesFM forecast**.
+5. FinanceXAI creates a two-column CSV in memory.
+6. The browser Gradio client uploads it to `/on_file_uploaded`.
+7. The same stateful Gradio client invokes `/run_forecast_pipeline` with **TimesFM-3 (Zero-Shot)**.
+8. FinanceXAI displays the returned metrics and prediction file natively.
 
-The cross-origin browser security boundary means FinanceXAI does not silently inject local files into the embedded Space.
+The Gradio client maintains the Space's `gr.State` session between the upload and forecast calls.
 
-## API endpoints
+## External browser dependency
 
-- `GET /api/health` — FinanceXAI runtime configuration.
-- `GET /api/model/health` — checks reachability of the external open-source Space.
-- `GET /api/forecast` — describes the current forecast execution contract.
-- `POST /api/forecast` — intentionally returns an explicit error because direct JSON-to-model inference is not implemented in this free turnaround.
+The frontend imports a pinned browser build of:
 
-This prevents FinanceXAI from claiming that a local Worker API is executing TimesFM when the actual execution happens in the embedded external Space.
+`@gradio/client@2.7.1`
 
-## TimesFM reference / mirror provenance
+from jsDelivr.
+
+This is required because the Space runs on Hugging Face's Zero infrastructure and the browser Gradio client handles the hosted Space session/API protocol.
+
+## Cloudflare endpoints
+
+- `GET /api/health` — FinanceXAI runtime/configuration.
+- `GET /api/model/health` — checks reachability of the external Space.
+- `GET /api/forecast` — documents the current browser-client forecast contract.
+- `POST /api/forecast` — intentionally does not proxy inference through the Worker; model calls are made from the browser Gradio client.
+
+## TimesFM reference provenance
 
 The project owner requested that FinanceXAI use:
 
@@ -68,15 +79,9 @@ The project owner requested that FinanceXAI use:
 
 as the TimesFM reference.
 
-The relevant historical TimesFM snapshot is pinned at:
+The relevant historical snapshot remains pinned at:
 
 `17dc87aaee41d96d214269b65e6fd211d4b636ee`
-
-That snapshot explicitly embedded:
-
-`https://hari31416-ts-foundation-lab.hf.space`
-
-and treated Hugging Face as the model-execution boundary.
 
 See:
 
@@ -84,7 +89,7 @@ See:
 
 ## License boundary
 
-The TimesFM source code and pretrained model weights have separate license boundaries.
+TimesFM source code and pretrained weights have separate license boundaries.
 
 TimesFM 3 pretrained weights are distributed under:
 
@@ -92,11 +97,7 @@ TimesFM 3 pretrained weights are distributed under:
 
 Treat this integration as a research / non-commercial path unless separate licensing clearance is obtained.
 
-The external Space is separately maintained and can change, sleep, queue, or become unavailable independently of FinanceXAI.
-
 ## Development
-
-Requires Node.js and npm.
 
 ```bash
 npm run dev
@@ -109,7 +110,7 @@ npm test
 npm run check
 ```
 
-`npm run check` runs the repository tests, JavaScript syntax checks, and a Wrangler deployment dry-run.
+The checks cover request validation, native Gradio client integration invariants, JavaScript syntax, and a Wrangler deployment dry-run.
 
 ## Deploy
 
@@ -117,17 +118,18 @@ npm run check
 npm run deploy
 ```
 
-The current `wrangler.jsonc` contains only the Worker and Static Assets configuration. It declares no Containers or Durable Objects.
+The current Wrangler configuration has no active Containers or Durable Object bindings. It retains the historical migration entries needed to delete the previously provisioned `TimesFMContainer` class.
 
-## Verification rule
+## Runtime verification
 
-A successful FinanceXAI deployment proves the Cloudflare application is live, not that the external model service is permanently available.
+A successful Cloudflare deploy proves FinanceXAI is live. Full forecast verification additionally requires a successful browser call to the public Space.
 
-For runtime verification:
+Verify:
 
-1. Check `GET /api/health`.
-2. Check `GET /api/model/health`.
-3. Open the embedded TimesFM Lab.
-4. Run a real forecast inside the Space.
+1. `GET /api/health`
+2. `GET /api/model/health`
+3. Open FinanceXAI
+4. Click **Run TimesFM forecast**
+5. Confirm the result card shows completion, metrics, and/or a predictions download
 
-Only then should the full open-source forecast path be called runtime-verified.
+If the upstream Space changes its API endpoints, FinanceXAI reports the missing endpoint instead of showing a generic embedded-component error.

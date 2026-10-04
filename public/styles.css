@@ -208,3 +208,13 @@ footer{display:flex;justify-content:space-between;gap:16px;padding:34px 2px 42px
   .forecast-controls{grid-template-columns:1fr}
   .result-heading{align-items:flex-start;flex-direction:column}
 }
+
+.optional-label{
+  margin-left:6px;
+  color:var(--muted);
+  font-size:9px;
+  font-style:normal;
+  font-weight:650;
+  text-transform:uppercase;
+  letter-spacing:.06em
+}

@@ -11,10 +11,6 @@ const sample = {
 const state = {
   periods: [],
   values: [],
-  forecast: [],
-  quantiles: [],
-  metrics: null,
-  metadata: null,
   source: "sample"
 };
 
@@ -22,28 +18,15 @@ const elements = {
   fileInput: document.querySelector("#fileInput"),
   sampleButton: document.querySelector("#sampleButton"),
   clearButton: document.querySelector("#clearButton"),
+  prepareButton: document.querySelector("#prepareButton"),
   seriesName: document.querySelector("#seriesName"),
   valueUnit: document.querySelector("#valueUnit"),
-  horizon: document.querySelector("#horizon"),
-  forecastButton: document.querySelector("#forecastButton"),
-  exportButton: document.querySelector("#exportButton"),
   status: document.querySelector("#status"),
   dataBadge: document.querySelector("#dataBadge"),
   observationCount: document.querySelector("#observationCount"),
   valueHeader: document.querySelector("#valueHeader"),
   inputTableBody: document.querySelector("#inputTableBody"),
-  forecastTableBody: document.querySelector("#forecastTableBody"),
-  forecastCount: document.querySelector("#forecastCount"),
-  chartTitle: document.querySelector("#chartTitle"),
-  actualPath: document.querySelector("#actualPath"),
-  forecastPath: document.querySelector("#forecastPath"),
-  splitLine: document.querySelector("#splitLine"),
-  metricLatest: document.querySelector("#metricLatest"),
-  metricEnd: document.querySelector("#metricEnd"),
-  metricChange: document.querySelector("#metricChange"),
-  metricLow: document.querySelector("#metricLow"),
-  metricHigh: document.querySelector("#metricHigh"),
-  metricWidth: document.querySelector("#metricWidth")
+  timesfmLab: document.querySelector("#timesfmLab")
 };
 
 function setStatus(message, error = false) {
@@ -169,18 +152,17 @@ function formatValue(value) {
   if (!Number.isFinite(value)) return "—";
   const unit = elements.valueUnit.value.trim();
   const number = formatNumber(value);
-
   if (!unit) return number;
   return currencyLikeUnit(unit) ? `${unit}${number}` : `${number} ${unit}`;
 }
 
-function resetForecast() {
-  state.forecast = [];
-  state.quantiles = [];
-  state.metrics = null;
-  state.metadata = null;
-  elements.exportButton.disabled = true;
-  renderResults();
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function loadSample() {
@@ -189,9 +171,7 @@ function loadSample() {
   state.source = "sample";
   elements.seriesName.value = sample.name;
   elements.valueUnit.value = sample.unit;
-  elements.horizon.value = "12";
   elements.fileInput.value = "";
-  resetForecast();
   renderInput();
   setStatus("Ready. Sample data is loaded.");
 }
@@ -201,9 +181,8 @@ function clearData() {
   state.values = [];
   state.source = "empty";
   elements.fileInput.value = "";
-  resetForecast();
   renderInput();
-  setStatus("Data cleared. Upload a CSV to continue.");
+  setStatus("Data cleared. Upload a CSV or reload the sample.");
 }
 
 function renderInput() {
@@ -224,7 +203,6 @@ function renderInput() {
   if (!count) {
     elements.inputTableBody.innerHTML =
       '<tr><td colspan="2" class="empty-cell">No observations loaded.</td></tr>';
-    renderChart();
     return;
   }
 
@@ -241,165 +219,6 @@ function renderInput() {
   }
 
   elements.inputTableBody.innerHTML = rows.join("");
-  renderChart();
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function pointsToPath(points) {
-  if (!points.length) return "";
-  return points
-    .map(([x, y], index) => `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`)
-    .join(" ");
-}
-
-function renderChart() {
-  const width = 920;
-  const height = 300;
-  const padX = 26;
-  const padY = 22;
-
-  const actual = state.values;
-  const forecast = state.forecast;
-  const all = [...actual, ...forecast];
-
-  elements.chartTitle.textContent = elements.seriesName.value.trim() || "Series";
-
-  if (!all.length) {
-    elements.actualPath.setAttribute("d", "");
-    elements.forecastPath.setAttribute("d", "");
-    elements.splitLine.setAttribute("x1", "0");
-    elements.splitLine.setAttribute("x2", "0");
-    return;
-  }
-
-  let min = Math.min(...all);
-  let max = Math.max(...all);
-  const rawSpan = max - min;
-  const padding = rawSpan === 0 ? Math.max(Math.abs(max) * 0.08, 1) : rawSpan * 0.1;
-  min -= padding;
-  max += padding;
-
-  const totalSlots = Math.max(actual.length + forecast.length - 1, 1);
-  const xFor = (index) => padX + (index / totalSlots) * (width - padX * 2);
-  const yFor = (value) =>
-    height - padY - ((value - min) / (max - min || 1)) * (height - padY * 2);
-
-  const actualPoints = actual.map((value, index) => [xFor(index), yFor(value)]);
-  const forecastPoints = [];
-
-  if (actual.length) {
-    forecastPoints.push([xFor(actual.length - 1), yFor(actual[actual.length - 1])]);
-  }
-
-  forecast.forEach((value, index) => {
-    forecastPoints.push([xFor(actual.length + index), yFor(value)]);
-  });
-
-  elements.actualPath.setAttribute("d", pointsToPath(actualPoints));
-  elements.forecastPath.setAttribute("d", pointsToPath(forecastPoints));
-
-  const splitX = actual.length ? xFor(actual.length - 1) : 0;
-  elements.splitLine.setAttribute("x1", String(splitX));
-  elements.splitLine.setAttribute("x2", String(splitX));
-}
-
-function renderResults() {
-  renderChart();
-
-  if (!state.metrics || !state.forecast.length) {
-    elements.metricLatest.textContent = state.values.length
-      ? formatValue(state.values[state.values.length - 1])
-      : "—";
-    elements.metricEnd.textContent = "—";
-    elements.metricChange.textContent = "—";
-    elements.metricLow.textContent = "—";
-    elements.metricHigh.textContent = "—";
-    elements.metricWidth.textContent = "—";
-    elements.forecastCount.textContent = "No forecast yet";
-    elements.forecastTableBody.innerHTML =
-      '<tr><td colspan="2" class="empty-cell">Run a forecast to populate this table.</td></tr>';
-    return;
-  }
-
-  const metrics = state.metrics;
-  elements.metricLatest.textContent = formatValue(metrics.latest);
-  elements.metricEnd.textContent = formatValue(metrics.forecastEnd);
-  elements.metricChange.textContent =
-    metrics.percentChange === null
-      ? formatValue(metrics.absoluteChange)
-      : `${metrics.percentChange >= 0 ? "+" : ""}${formatNumber(metrics.percentChange, 1)}%`;
-  elements.metricLow.textContent = formatValue(metrics.intervalLowEnd);
-  elements.metricHigh.textContent = formatValue(metrics.intervalHighEnd);
-  elements.metricWidth.textContent = formatValue(metrics.intervalWidthEnd);
-
-  elements.forecastCount.textContent =
-    `${state.forecast.length} future period${state.forecast.length === 1 ? "" : "s"}`;
-
-  elements.forecastTableBody.innerHTML = state.forecast
-    .map(
-      (value, index) => `
-        <tr>
-          <td>t+${index + 1}</td>
-          <td>${escapeHtml(formatValue(value))}</td>
-        </tr>
-      `
-    )
-    .join("");
-}
-
-async function runForecast() {
-  if (state.values.length < 3) {
-    setStatus("Upload at least 3 observations before forecasting.", true);
-    return;
-  }
-
-  const horizon = Number(elements.horizon.value);
-  if (!Number.isInteger(horizon) || horizon < 1 || horizon > 120) {
-    setStatus("Forecast horizon must be an integer between 1 and 120.", true);
-    return;
-  }
-
-  elements.forecastButton.disabled = true;
-  elements.exportButton.disabled = true;
-  setStatus("Running TimesFM 3. The first request can be slower while the model container warms up…");
-
-  try {
-    const response = await fetch("/api/forecast", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ series: state.values, horizon })
-    });
-
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload.error || "Forecast request failed.");
-    }
-
-    state.forecast = Array.isArray(payload.forecast) ? payload.forecast : [];
-    state.quantiles = Array.isArray(payload.quantiles) ? payload.quantiles : [];
-    state.metrics = payload.metrics || null;
-    state.metadata = payload.metadata || null;
-
-    renderResults();
-    elements.exportButton.disabled = state.forecast.length === 0;
-    setStatus(
-      `Forecast complete: ${state.forecast.length} future period${state.forecast.length === 1 ? "" : "s"} generated by ${state.metadata?.model || "TimesFM 3"}.`
-    );
-  } catch (error) {
-    resetForecast();
-    setStatus(error instanceof Error ? error.message : "Forecast failed.", true);
-  } finally {
-    elements.forecastButton.disabled = false;
-  }
 }
 
 function csvEscape(value) {
@@ -407,16 +226,14 @@ function csvEscape(value) {
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-function exportForecast() {
-  if (!state.forecast.length) return;
+function downloadPreparedCsv() {
+  if (state.values.length < 3) {
+    throw new Error("Load at least 3 observations before preparing a TimesFM CSV.");
+  }
 
-  const rows = [["phase", "period", "value", "p10", "p90"]];
+  const rows = [["period", elements.seriesName.value.trim() || "value"]];
   state.values.forEach((value, index) => {
-    rows.push(["actual", state.periods[index] || String(index + 1), value, "", ""]);
-  });
-  state.forecast.forEach((value, index) => {
-    const quantiles = Array.isArray(state.quantiles[index]) ? state.quantiles[index] : [];
-    rows.push(["forecast", `t+${index + 1}`, value, quantiles[0] ?? "", quantiles[8] ?? ""]);
+    rows.push([state.periods[index] || String(index + 1), value]);
   });
 
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
@@ -429,9 +246,19 @@ function exportForecast() {
     .toLowerCase();
 
   anchor.href = url;
-  anchor.download = `${safeName || "financexai"}-forecast.csv`;
+  anchor.download = `${safeName || "financexai"}-timesfm-input.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function prepareAndOpenLab() {
+  try {
+    downloadPreparedCsv();
+    setStatus("Prepared CSV downloaded. Upload it in the TimesFM Lab below, choose TimesFM-3, set the horizon, and run the forecast.");
+    elements.timesfmLab.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "Could not prepare the CSV.", true);
+  }
 }
 
 elements.fileInput.addEventListener("change", async (event) => {
@@ -450,7 +277,6 @@ elements.fileInput.addEventListener("change", async (event) => {
     state.values = parsed.values;
     state.source = "csv";
     elements.seriesName.value = parsed.name;
-    resetForecast();
     renderInput();
     setStatus(`Loaded ${parsed.values.length} observations from ${file.name}.`);
   } catch (error) {
@@ -460,15 +286,8 @@ elements.fileInput.addEventListener("change", async (event) => {
 
 elements.sampleButton.addEventListener("click", loadSample);
 elements.clearButton.addEventListener("click", clearData);
-elements.forecastButton.addEventListener("click", runForecast);
-elements.exportButton.addEventListener("click", exportForecast);
-elements.seriesName.addEventListener("input", () => {
-  renderInput();
-  renderResults();
-});
-elements.valueUnit.addEventListener("input", () => {
-  renderInput();
-  renderResults();
-});
+elements.prepareButton.addEventListener("click", prepareAndOpenLab);
+elements.seriesName.addEventListener("input", renderInput);
+elements.valueUnit.addEventListener("input", renderInput);
 
 loadSample();

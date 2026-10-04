@@ -52,19 +52,20 @@ function forecastContract() {
   return {
     endpoint: "/api/forecast",
     engine: "timesfm-3.0",
-    executionMode: "embedded-open-source-space",
+    executionMode: "browser-gradio-client",
     provider: "Hugging Face Space",
     space: TIMESFM_SPACE_PAGE,
-    embeddedUrl: TIMESFM_SPACE_URL,
+    spaceRuntimeUrl: TIMESFM_SPACE_URL,
     directJsonForecastApi: false,
+    browserClient: "@gradio/client",
     instructions: [
       "Prepare or upload a CSV in FinanceXAI.",
-      "Open the embedded TimesFM Lab.",
-      "Upload the CSV inside the lab.",
-      "Choose TimesFM-3 and the forecast horizon.",
-      "Run the forecast and inspect the result in the embedded lab."
+      "FinanceXAI connects to the public Space through the Gradio browser client.",
+      "FinanceXAI sends the prepared CSV to the on_file_uploaded endpoint.",
+      "FinanceXAI invokes run_forecast_pipeline with TimesFM-3.",
+      "FinanceXAI renders returned metrics and prediction files natively."
     ],
-    note: "The free turnaround uses the public open-source Space UI as the model-execution boundary. FinanceXAI does not claim a direct array-to-model API connection."
+    note: "The free turnaround uses the public open-source Space API as the model-execution boundary. The Cloudflare Worker does not run TimesFM itself."
   };
 }
 
@@ -82,7 +83,7 @@ export default {
         service: "FinanceXAI",
         runtime: "cloudflare-workers",
         forecastEngine: "timesfm-3.0",
-        inferenceRuntime: "external-open-source-space",
+        inferenceRuntime: "browser-gradio-client-to-open-source-space",
         provider: "Hugging Face Space",
         space: TIMESFM_SPACE_PAGE,
         cloudflareContainers: false,
@@ -105,7 +106,7 @@ export default {
 
       if (request.method === "POST") {
         return errorResponse(
-          "Direct JSON forecasting is not enabled in the free open-source turnaround. Use the embedded TimesFM Lab.",
+          "Direct Worker-side JSON forecasting is not enabled. The FinanceXAI browser uses the Gradio client to call the public TimesFM Space.",
           409,
           forecastContract()
         );

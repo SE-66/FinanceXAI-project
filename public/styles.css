@@ -132,3 +132,31 @@ footer{display:flex;justify-content:space-between;gap:16px;padding:34px 2px 42px
   #chart{height:250px}
   .integrity-note{grid-template-columns:1fr;gap:7px}
 }
+
+.link-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+}
+.link-button.full{margin-top:10px}
+.compact-link{padding:8px 11px;white-space:nowrap}
+.lab-panel{margin-top:16px;padding:22px}
+.lab-boundary{
+  display:grid;
+  gap:7px;
+  margin-bottom:16px;
+  padding:14px 15px;
+  border:1px solid var(--line-soft);
+  border-radius:12px;
+  background:rgba(255,255,255,.018)
+}
+.lab-boundary strong{font-size:11px;color:#c7d7cf;text-transform:uppercase;letter-spacing:.08em}
+.lab-boundary p{margin:0;color:var(--muted);font-size:11px;line-height:1.6}
+.lab-boundary code{color:var(--accent);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.lab-frame-wrap{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff}
+.lab-frame{display:block;width:100%;min-height:920px;border:0;background:#fff}
+@media(max-width:600px){
+  .lab-panel{padding:14px}
+  .lab-frame{min-height:780px}
+}

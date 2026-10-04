@@ -16,7 +16,7 @@
       </a>
       <div class="topbar-meta">
         <span class="pill">Cloudflare native</span>
-        <span class="pill muted">Baseline v1</span>
+        <span class="pill muted">TimesFM 3</span>
       </div>
     </nav>
 
@@ -25,13 +25,13 @@
         <p class="eyebrow">FINANCIAL FORECASTING WORKSPACE</p>
         <h1>Turn a time series into a clear forward view.</h1>
         <p class="hero-copy">
-          Upload ordered financial data, choose a forecast horizon, and inspect a transparent trend baseline before adding model-driven intelligence.
+          Upload ordered financial data, choose a forecast horizon, and run a model-backed zero-shot forecast with Google TimesFM 3 on Cloudflare.
         </p>
       </div>
       <aside class="truth-card" aria-label="Current engine status">
         <span class="truth-label">Current forecast engine</span>
-        <strong>Linear trend baseline</strong>
-        <p>Deterministic and auditable. No external AI model is connected in this milestone.</p>
+        <strong>Google TimesFM 3</strong>
+        <p>Model-backed inference runs in a Cloudflare Container. TimesFM 3 weights are licensed for non-commercial use.</p>
       </aside>
     </header>
 
@@ -95,9 +95,9 @@
           <label class="field">
             <span>Engine</span>
             <select disabled aria-label="Forecast engine">
-              <option>Linear trend baseline v1</option>
+              <option>TimesFM 3.0 — Cloudflare Container</option>
             </select>
-            <small>A deterministic comparator. It is not presented as AI.</small>
+            <small>Zero-shot foundation-model forecast using google/timesfm-3.0-pytorch.</small>
           </label>
 
           <label class="field">
@@ -109,8 +109,8 @@
           </label>
 
           <div class="method-card">
-            <span>What this baseline does</span>
-            <p>Fits a least-squares straight-line trend across the ordered observations and extends that trend forward.</p>
+            <span>What this model path does</span>
+            <p>TimesFM reads the ordered context and returns a point forecast plus 10th–90th percentile quantiles for each future step.</p>
           </div>
 
           <button id="forecastButton" class="button primary full" type="button">Run forecast</button>
@@ -131,16 +131,16 @@
           <div class="metric"><span>Latest actual</span><strong id="metricLatest">—</strong></div>
           <div class="metric"><span>Forecast end</span><strong id="metricEnd">—</strong></div>
           <div class="metric"><span>Projected change</span><strong id="metricChange">—</strong></div>
-          <div class="metric"><span>Trend / period</span><strong id="metricSlope">—</strong></div>
-          <div class="metric"><span>Fit MAE</span><strong id="metricMae">—</strong></div>
-          <div class="metric"><span>R² fit</span><strong id="metricR2">—</strong></div>
+          <div class="metric"><span>P10 · forecast end</span><strong id="metricLow">—</strong></div>
+          <div class="metric"><span>P90 · forecast end</span><strong id="metricHigh">—</strong></div>
+          <div class="metric"><span>80% interval width</span><strong id="metricWidth">—</strong></div>
         </div>
 
         <div class="chart-card">
           <div class="chart-head">
             <div>
               <strong id="chartTitle">Series</strong>
-              <span>History and forward baseline</span>
+              <span>History and forward TimesFM forecast</span>
             </div>
             <div class="legend" aria-label="Chart legend">
               <span><i class="dot actual"></i>Actual</span>
@@ -171,9 +171,9 @@
       </section>
 
       <section class="integrity-note">
-        <strong>FinanceXAI milestone 1</strong>
+        <strong>FinanceXAI · TimesFM research path</strong>
         <p>
-          Forecasting is currently deterministic. Model-backed AI, persistence, authentication, and financial decision automation are not implemented yet.
+          Forecasts are model-backed, not financial advice. TimesFM 3 pretrained weights use the timesfm-non-commercial-license-v1.0 license; commercial use requires separate licensing clearance.
         </p>
       </section>
     </main>

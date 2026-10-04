@@ -2,17 +2,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [worker, wrangler, html, pkg, mirror] = await Promise.all([
+const [worker, wrangler, html, app, pkg, mirror] = await Promise.all([
   readFile(new URL("../src/index.js", import.meta.url), "utf8"),
   readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
+  readFile(new URL("../public/app.js", import.meta.url), "utf8"),
   readFile(new URL("../package.json", import.meta.url), "utf8"),
   readFile(new URL("../mirrors/timesfm-research-workspace/README.md", import.meta.url), "utf8")
 ]);
 
-test("FinanceXAI uses the open-source TimesFM Space execution boundary", () => {
+test("FinanceXAI keeps the free external TimesFM execution boundary", () => {
   assert.match(worker, /hari31416-ts-foundation-lab\.hf\.space/);
-  assert.match(worker, /executionMode: "external-open-source-space"/);
   assert.match(worker, /paidCloudflareServicesRequired: false/);
   assert.doesNotMatch(worker, /getContainer\(/);
   assert.doesNotMatch(worker, /@cloudflare\/containers/);
@@ -31,11 +31,15 @@ test("package has no paid-container runtime dependency", () => {
   assert.doesNotMatch(pkg, /timesfm-service\/app\.py/);
 });
 
-test("UI embeds the live open-source TS Foundation Lab", () => {
-  assert.match(html, /https:\/\/hari31416-ts-foundation-lab\.hf\.space/);
-  assert.match(html, /Open-source TimesFM Lab/);
-  assert.match(html, /external Hugging Face Space/);
-  assert.doesNotMatch(html, /TimesFM 3\.0 — Cloudflare Container/);
+test("native UI uses Gradio client instead of embedding the Space dashboard", () => {
+  assert.match(app, /@gradio\/client@2\.7\.1/);
+  assert.match(app, /Client\.connect\(SPACE_ID/);
+  assert.match(app, /"\/on_file_uploaded"/);
+  assert.match(app, /"\/run_forecast_pipeline"/);
+  assert.match(app, /"TimesFM-3 \(Zero-Shot\)"/);
+  assert.doesNotMatch(html, /<iframe/i);
+  assert.match(html, /Run TimesFM forecast/);
+  assert.match(html, /TimesFM result/);
 });
 
 test("requested research workspace provenance remains pinned", () => {

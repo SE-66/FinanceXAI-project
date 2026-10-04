@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="FinanceXAI — Cloudflare-native financial forecasting workspace." />
+  <title>FinanceXAI</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <nav class="topbar" aria-label="Primary">
+      <a class="brand" href="/" aria-label="FinanceXAI home">
+        <span class="brand-mark">FX</span>
+        <span>FinanceXAI</span>
+      </a>
+      <div class="topbar-meta">
+        <span class="pill">Cloudflare native</span>
+        <span class="pill muted">Baseline v1</span>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">FINANCIAL FORECASTING WORKSPACE</p>
+        <h1>Turn a time series into a clear forward view.</h1>
+        <p class="hero-copy">
+          Upload ordered financial data, choose a forecast horizon, and inspect a transparent trend baseline before adding model-driven intelligence.
+        </p>
+      </div>
+      <aside class="truth-card" aria-label="Current engine status">
+        <span class="truth-label">Current forecast engine</span>
+        <strong>Linear trend baseline</strong>
+        <p>Deterministic and auditable. No external AI model is connected in this milestone.</p>
+      </aside>
+    </header>
+
+    <main>
+      <section class="workspace-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step">01</span>
+              <h2>Load data</h2>
+            </div>
+            <span id="dataBadge" class="status-badge sample">Sample data</span>
+          </div>
+
+          <label class="field">
+            <span>CSV file</span>
+            <input id="fileInput" type="file" accept=".csv,text/csv" />
+            <small>The app automatically selects the numeric column with the most valid observations.</small>
+          </label>
+
+          <div class="two-fields">
+            <label class="field">
+              <span>Series name</span>
+              <input id="seriesName" type="text" value="Monthly revenue" />
+            </label>
+            <label class="field">
+              <span>Value unit</span>
+              <input id="valueUnit" type="text" value="$" maxlength="12" />
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="sampleButton" class="button secondary" type="button">Reload sample</button>
+            <button id="clearButton" class="button ghost" type="button">Clear</button>
+          </div>
+
+          <div class="preview-wrap">
+            <div class="preview-head">
+              <span>Data preview</span>
+              <strong id="observationCount">12 observations</strong>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Period</th><th id="valueHeader">Value</th></tr>
+                </thead>
+                <tbody id="inputTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="step">02</span>
+              <h2>Configure forecast</h2>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Engine</span>
+            <select disabled aria-label="Forecast engine">
+              <option>Linear trend baseline v1</option>
+            </select>
+            <small>A deterministic comparator. It is not presented as AI.</small>
+          </label>
+
+          <label class="field">
+            <span>Forecast horizon</span>
+            <div class="horizon-control">
+              <input id="horizon" type="number" min="1" max="120" value="12" inputmode="numeric" />
+              <span>future periods</span>
+            </div>
+          </label>
+
+          <div class="method-card">
+            <span>What this baseline does</span>
+            <p>Fits a least-squares straight-line trend across the ordered observations and extends that trend forward.</p>
+          </div>
+
+          <button id="forecastButton" class="button primary full" type="button">Run forecast</button>
+          <p id="status" class="status" role="status" aria-live="polite">Ready. Sample data is loaded.</p>
+        </article>
+      </section>
+
+      <section class="panel results-panel" aria-labelledby="resultsTitle">
+        <div class="panel-heading result-heading">
+          <div>
+            <span class="step">03</span>
+            <h2 id="resultsTitle">Forecast result</h2>
+          </div>
+          <button id="exportButton" class="button secondary" type="button" disabled>Export CSV</button>
+        </div>
+
+        <div class="metrics" id="metrics">
+          <div class="metric"><span>Latest actual</span><strong id="metricLatest">—</strong></div>
+          <div class="metric"><span>Forecast end</span><strong id="metricEnd">—</strong></div>
+          <div class="metric"><span>Projected change</span><strong id="metricChange">—</strong></div>
+          <div class="metric"><span>Trend / period</span><strong id="metricSlope">—</strong></div>
+          <div class="metric"><span>Fit MAE</span><strong id="metricMae">—</strong></div>
+          <div class="metric"><span>R² fit</span><strong id="metricR2">—</strong></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <strong id="chartTitle">Series</strong>
+              <span>History and forward baseline</span>
+            </div>
+            <div class="legend" aria-label="Chart legend">
+              <span><i class="dot actual"></i>Actual</span>
+              <span><i class="dot forecast"></i>Forecast</span>
+            </div>
+          </div>
+          <svg id="chart" viewBox="0 0 920 300" role="img" aria-label="Historical and forecast chart">
+            <line id="splitLine" class="split-line" x1="0" x2="0" y1="18" y2="282"></line>
+            <path id="actualPath" class="actual-line" d=""></path>
+            <path id="forecastPath" class="forecast-line" d=""></path>
+          </svg>
+        </div>
+
+        <div class="forecast-table-wrap">
+          <div class="preview-head">
+            <span>Forecast values</span>
+            <strong id="forecastCount">No forecast yet</strong>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Future period</th><th>Forecast</th></tr></thead>
+              <tbody id="forecastTableBody">
+                <tr><td colspan="2" class="empty-cell">Run a forecast to populate this table.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="integrity-note">
+        <strong>FinanceXAI milestone 1</strong>
+        <p>
+          Forecasting is currently deterministic. Model-backed AI, persistence, authentication, and financial decision automation are not implemented yet.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>FinanceXAI</span>
+      <span>GitHub source · Cloudflare runtime</span>
+    </footer>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

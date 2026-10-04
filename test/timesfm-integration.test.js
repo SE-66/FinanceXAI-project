@@ -2,55 +2,42 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [worker, wrangler, html, service, mirror] = await Promise.all([
+const [worker, wrangler, html, pkg, mirror] = await Promise.all([
   readFile(new URL("../src/index.js", import.meta.url), "utf8"),
   readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
   readFile(new URL("../public/index.html", import.meta.url), "utf8"),
-  readFile(new URL("../timesfm-service/app.py", import.meta.url), "utf8"),
+  readFile(new URL("../package.json", import.meta.url), "utf8"),
   readFile(new URL("../mirrors/timesfm-research-workspace/README.md", import.meta.url), "utf8")
 ]);
 
-test("FinanceXAI routes forecasts to a TimesFM Cloudflare Container", () => {
-  assert.match(worker, /getContainer\(env\.TIMESFM/);
-  assert.match(worker, /engine: "timesfm-3\.0"/);
-  assert.match(worker, /google\/timesfm-3\.0-pytorch/);
-  assert.doesNotMatch(worker, /linearTrendForecast\(body\.series/);
+test("FinanceXAI uses the open-source TimesFM Space execution boundary", () => {
+  assert.match(worker, /hari31416-ts-foundation-lab\.hf\.space/);
+  assert.match(worker, /executionMode: "external-open-source-space"/);
+  assert.match(worker, /paidCloudflareServicesRequired: false/);
+  assert.doesNotMatch(worker, /getContainer\(/);
+  assert.doesNotMatch(worker, /@cloudflare\/containers/);
 });
 
-test("Wrangler declares the TimesFM container and durable object", () => {
-  assert.match(wrangler, /"class_name": "TimesFMContainer"/);
-  assert.match(wrangler, /"instance_type": "standard-2"/);
-  assert.match(wrangler, /"name": "TIMESFM"/);
-  assert.match(wrangler, /"new_sqlite_classes": \["TimesFMContainer"\]/);
+test("Wrangler is Free-Workers compatible and declares no containers", () => {
+  assert.match(wrangler, /"assets"/);
+  assert.doesNotMatch(wrangler, /"containers"/);
+  assert.doesNotMatch(wrangler, /"durable_objects"/);
+  assert.doesNotMatch(wrangler, /TimesFMContainer/);
 });
 
-test("TimesFM service uses the official TimesFM 3 model path", () => {
-  assert.match(service, /TimesFM3Evaluator/);
-  assert.match(service, /google\/timesfm-3\.0-pytorch/);
-  assert.match(service, /return_quantiles=True/);
-  assert.match(service, /timesfm-non-commercial-license-v1\.0/);
+test("package has no paid-container runtime dependency", () => {
+  assert.doesNotMatch(pkg, /@cloudflare\/containers/);
+  assert.doesNotMatch(pkg, /timesfm-service\/app\.py/);
 });
 
-test("container installs CPU-only PyTorch without the TimesFM torch extra", async () => {
-  const [dockerfile, requirements] = await Promise.all([
-    readFile(new URL("../timesfm-service/Dockerfile", import.meta.url), "utf8"),
-    readFile(new URL("../timesfm-service/requirements.txt", import.meta.url), "utf8")
-  ]);
-
-  assert.match(dockerfile, /download\.pytorch\.org\/whl\/cpu/);
-  assert.match(dockerfile, /torch==2\.10\.0/);
-  assert.match(dockerfile, /assert not torch\.cuda\.is_available/);
-  assert.doesNotMatch(requirements, /timesfm\[torch\]/);
-  assert.match(requirements, /^timesfm==3\.0\.2$/m);
+test("UI embeds the live open-source TS Foundation Lab", () => {
+  assert.match(html, /https:\/\/hari31416-ts-foundation-lab\.hf\.space/);
+  assert.match(html, /Open-source TimesFM Lab/);
+  assert.match(html, /external Hugging Face Space/);
+  assert.doesNotMatch(html, /Cloudflare Container/);
 });
 
-test("UI identifies the model and license boundary", () => {
-  assert.match(html, /Google TimesFM 3/);
-  assert.match(html, /Cloudflare Container/);
-  assert.match(html, /timesfm-non-commercial-license-v1\.0/);
-});
-
-test("requested research workspace provenance is pinned", () => {
+test("requested research workspace provenance remains pinned", () => {
   assert.match(mirror, /SE-66\/SE-66-timesfm-research-workspace/);
   assert.match(mirror, /17dc87aaee41d96d214269b65e6fd211d4b636ee/);
 });
